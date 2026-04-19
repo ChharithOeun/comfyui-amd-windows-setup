@@ -135,11 +135,13 @@ Open your browser to **http://127.0.0.1:8188**
 The RX 5700 XT occasionally hangs on large attention operations. Add these to your `comfyui-user.bat` before the python call:
 
 ```bat
-set HSA_OVERRIDE_GFX_VERSION=10.3.0
-set ROCBLAS_TENSILE_LIBPATH=C:\comfyui-rocm\python_env\Lib\site-packages\rocm\lib\rocblas\library
+:: IMPORTANT: Do NOT set HSA_OVERRIDE_GFX_VERSION for RDNA1 -- comfyui-rocm auto-detects gfx1010
+:: Setting it (or leaving it as empty string) causes "HSA_OVERRIDE_GFX_VERSION is invalid" and GPU not found
+set "HSA_OVERRIDE_GFX_VERSION="
 set HSA_ENABLE_SDMA=0
-python main.py --use-pytorch-cross-attention
 ```
+
+> **Critical:** If you ever ran `set HSA_OVERRIDE_GFX_VERSION=10.3.0` in your CMD session by mistake, use `set "HSA_OVERRIDE_GFX_VERSION="` (with quotes) to fully delete it before launching. Without quotes it leaves an empty string that ROCm also rejects.
 
 ---
 
@@ -154,7 +156,7 @@ python main.py --use-pytorch-cross-attention
 | Model | SD 1.5 (v1-5-pruned-emaonly) |
 | Resolution | 512x512 |
 | Steps | 20 (DPM++ 2M) |
-| Gen time | ~18 sec/image |
+| Gen time | ~23 sec/image (20 steps, 1.21 it/s) |
 
 <p align="center"><img src="assets/proof_rx5700xt.png" alt="Generated image on RX 5700 XT" width="512"></p>
 
@@ -219,6 +221,26 @@ python main.py --directml --force-fp32
 ---
 
 ## Troubleshooting
+
+### `HSA_OVERRIDE_GFX_VERSION is invalid` / `RuntimeError: No CUDA GPUs are available`
+
+This is the most common failure on RDNA1/2 after someone sets the wrong env var:
+
+```bat
+:: Check if the poisoned var is lurking in your session:
+set HSA
+:: If you see HSA_OVERRIDE_GFX_VERSION= (even empty), it will still break ROCm.
+
+:: Properly DELETE it (quotes required -- without quotes leaves empty string, also invalid):
+set "HSA_OVERRIDE_GFX_VERSION="
+
+:: Verify it's gone (should NOT appear in output):
+set HSA
+```
+
+> comfyui-rocm auto-detects gfx1010/gfx101X and configures the correct ROCm stack via `detect_gpu.py`. You do not need to set `HSA_OVERRIDE_GFX_VERSION` at all for RDNA1.
+
+---
 
 ### "No AMD GPU detected" / falls back to CPU
 
