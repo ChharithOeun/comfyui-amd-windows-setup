@@ -1,58 +1,100 @@
-name: Auto Changelog
+name: Update Changelog
 
 on:
   push:
-    branches:
-      - main
-    paths-ignore:
-      - CHANGELOG.md
-
-permissions:
-  contents: write
+    branches: [ main ]
 
 jobs:
   changelog:
+    name: Update Changelog
     runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip changelog]')"
+
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-      - name: Generate changelog
-        run: |
-          python3 << "EOF"
-          import subprocess, os
-          from datetime import datetime
-          cl = "CHANGELOG.md"
-          content = open(cl).read() if os.path.exists(cl) else ""
-          last = subprocess.run(["git","log","-1","--format=%aI","--",cl], capture_output=True, text=True).stdout.strip()
-          cmd = ["git","log",f"{last}..HEAD","--pretty=format:%s"] if last else ["git","log","--pretty=format:%s"]
-          commits = [c for c in subprocess.run(cmd, capture_output=True, text=True).stdout.split("\n") if c.strip()]
-          if not commits: exit(0)
-          cats = {"feat":"Features","fix":"Bug Fixes","docs":"Documentation","chore":"Chores"}
-          buckets = {v:[] for v in cats.values()}
-          other = []
-          for c in commits:
-              found = False
-              for p,cat in cats.items():
-                  if c.startswith(p+":") or c.startswith(p+"("):
-                      buckets[cat].append(c.split(":",1)[1].strip())
-                      found = True; break
-              if not found: other.append(c)
-          entry = "## [Unreleased]\n\n"
-          for cat in ["Features","Bug Fixes","Documentation","Chores"]:
-              if buckets[cat]:
-                  entry += f"### {cat}\n\n" + "".join(f"- {i}\n" for i in buckets[cat]) + "\n"
-          if other:
-              entry += "### Other\n\n" + "".join(f"- {i}\n" for i in other) + "\n"
-          header = "# Changelog\n\nAll notable changes to this project will be documented in this file.\n\nThe format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).\n\n"
-          open(cl,"w").write((header if not content else "") + entry + content)
-          print(f"Updated changelog with {len(commits)} commits")
-          EOF
-      - name: Commit changelog
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git diff --quiet CHANGELOG.md || (git add CHANGELOG.md && git commit -m "docs: auto-update CHANGELOG.md [skip ci]" && git push)
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    - name: Parse commits and update CHANGELOG.md
+      run: |
+        python3 - << 'EOFPYTHON'
+        import subprocess
+        import re
+        from datetime import datetime
+        from pathlib import Path
+
+        # Get recent commits
+        try:
+            result = subprocess.run(
+                ["git", "log", "--oneline", "-20"],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            commits = result.stdout.strip().split('\n')
+        except subprocess.CalledProcessError:
+            commits = []
+
+        if not commits or commits == ['']:
+            print("No commits to process")
+            exit(0)
+
+        # Categorize commits
+        added = []
+        fixed = []
+        changed = []
+
+        for commit in commits:
+            if not commit:
+                continue
+            msg = commit.split(None, 1)[1] if ' ' in commit else commit
+
+            if msg.startswith('add ') or msg.startswith('feat'):
+                added.append(msg)
+            elif msg.startswith('fix '):
+                fixed.append(msg)
+            else:
+                changed.append(msg)
+
+        # Read current CHANGELOG
+        changelog_path = Path("CHANGELOG.md")
+        if changelog_path.exists():
+            changelog = changelog_path.read_text()
+        else:
+            changelog = ""
+
+        # Check if already updated recently
+        today = datetime.now().strftime('%Y-%m-%d')
+        if f"[Unreleased] - {today}" in changelog or "## [Unreleased]" not in changelog:
+            print("Changelog already updated or no template found")
+            exit(0)
+
+        # Update CHANGELOG (skip if already has entries)
+        if "### Added" not in changelog or "### Fixed" not in changelog:
+            new_entries = []
+            if added:
+                new_entries.append("### Added\n" + '\n'.join(f"- {c}" for c in added))
+            if fixed:
+                new_entries.append("### Fixed\n" + '\n'.join(f"- {c}" for c in fixed))
+            if changed:
+                new_entries.append("### Changed\n" + '\n'.join(f"- {c}" for c in changed))
+
+            if new_entries:
+                new_section = "## [Unreleased]\n\n" + "\n\n".join(new_entries) + "\n\n"
+                changelog = changelog.replace("## [Unreleased]\n\n", new_section)
+                changelog_path.write_text(changelog)
+                print("Changelog updated")
+        EOFPYTHON
+
+    - name: Commit and push if changed
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        git add CHANGELOG.md
+        git diff --quiet && git diff --staged --quiet || (git commit -m "chore: update CHANGELOG [skip changelog]" && git push)
+      continue-on-error: true
