@@ -1,0 +1,4 @@
+# ComfyUI AMD Windows Setup
+# DirectML backend for AMD GPU support on Windows
+
+torch-directml>=1.13.0       # NVIDIA PyTorch -> AMD DirectML backend
