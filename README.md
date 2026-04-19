@@ -1,346 +1,153 @@
-<p align="center"><img src="assets/banner.png" alt="ComfyUI AMD Windows Setup Banner" width="100%"></p>
+[![CI](https://github.com/ChharithOeun/comfyui-amd-windows-setup/actions/workflows/ci.yml/badge.svg)](https://github.com/ChharithOeun/comfyui-amd-windows-setup/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/downloads/)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Support-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/chharith)
 
-# comfyui-amd-windows-setup
+# ComfyUI AMD Windows Setup
 
-**Run ComfyUI on your AMD GPU on Windows -- the guide AMD should have written.**
+**Install and run ComfyUI on AMD GPU Windows with DirectML — no CUDA needed.**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tested: RX 5700 XT](https://img.shields.io/badge/Tested-RX%205700%20XT-red.svg)](#proof)
-[![AMD](https://img.shields.io/badge/AMD-RDNA1%2F2%2F3%2F4-blue.svg)](#gpu-compatibility)
+ComfyUI is a powerful node-based Stable Diffusion workflow engine. This repository automates setup for AMD GPUs on Windows using **DirectML** backend, eliminating the need for NVIDIA-specific tooling or ROCm compilation.
 
-AMD added official Windows ROCm support in January 2026 -- but only for RDNA3/4 (RX 7000/9000). If you have an RX 5700 XT, RX 6000, or any older card, you're on your own. This guide covers all three working paths for every AMD GPU generation, with real tested output from an RX 5700 XT.
+## Quick Start
 
----
+```bash
+git clone https://github.com/ChharithOeun/comfyui-amd-windows-setup.git
+cd comfyui-amd-windows-setup
 
-## GPU Compatibility -- Pick Your Path
-
-| GPU Generation | Series | Windows Path | Performance vs NVIDIA |
-|---|---|---|---|
-| **RDNA 4** | RX 9000 | ROCm Native (official) | ~95% |
-| **RDNA 3** | RX 7000 | ROCm Native (official) | ~90% |
-| **RDNA 3.5** | Ryzen AI (780M, 890M) | ROCm Native (official) | ~85% |
-| **RDNA 2** | RX 6000 | comfyui-rocm (community) | ~75% |
-| **RDNA 1** | RX 5000 | comfyui-rocm (community) | ~60% |
-| **Older / APU** | RX 500, iGPU | DirectML | ~40% |
-
-> **Not sure what you have?** Run `wmic path win32_videocontroller get name` in CMD.
-
----
-
-## Quick Start -- Choose Your Method
-
-### Method A: comfyui-rocm (Recommended for RDNA1/2, Best for All)
-
-Works on **every** AMD GPU from RX 5000 to RX 9000. Auto-installs ROCm and PyTorch nightly wheels matched to your exact GPU architecture.
-
-```
-1. git clone https://github.com/patientx-cfz/comfyui-rocm C:\comfyui-rocm
-2. cd C:\comfyui-rocm
-3. Double-click install.bat
-4. Wait ~15-30 min (downloads ROCm + PyTorch wheels)
-5. Drop a model in C:\comfyui-rocm\models\checkpoints\
-6. Double-click comfyui-user.bat
-7. Open http://127.0.0.1:8188
-```
-
-### Method B: Official ComfyUI Portable + ROCm (RDNA3/4 Only)
-
-Only for RX 7000 / RX 9000 / Ryzen AI 300+.
-
-```
-1. Go to https://github.com/comfyanonymous/ComfyUI/releases
-2. Download ComfyUI_windows_portable_amd.7z
-3. Extract with 7-Zip
-4. Run run_amd_gpu.bat
-5. Drop model in ComfyUI_windows_portable\ComfyUI\models\checkpoints\
-```
-
-### Method C: DirectML (Any AMD GPU, No ROCm Needed)
-
-Slowest but works on anything -- RX 400 series and newer.
-
-```
-1. git clone https://github.com/comfyanonymous/ComfyUI
-2. cd ComfyUI
-3. pip install torch-directml
-4. pip install -r requirements.txt
-5. python main.py --directml
-```
-
----
-
-## Step-by-Step: Method A Full Install (comfyui-rocm)
-
-### Prerequisites
-
-- Windows 10/11 64-bit
-- AMD Adrenalin driver (latest -- get from [amd.com/support](https://www.amd.com/en/support))
-- Git: [git-scm.com/download/win](https://git-scm.com/download/win)
-- Visual C++ Runtime: [aka.ms/vs/17/release/vc_redist.x64.exe](https://aka.ms/vs/17/release/vc_redist.x64.exe)
-- 15-20 GB free disk space (ROCm wheels are large)
-
-### Install
-
-```bat
-:: Open CMD as Administrator -- NOT required but avoids path permission issues
-:: Install to drive root -- NOT inside Program Files or your user folder
-
-git clone https://github.com/patientx-cfz/comfyui-rocm C:\comfyui-rocm
-cd C:\comfyui-rocm
-install.bat
-```
-
-The installer will:
-1. Download Python 3.12 embeddable (self-contained, no system Python needed)
-2. Detect your GPU architecture automatically
-3. Download and install ROCm nightly wheels for your exact GPU (gfx101X, gfx103X, gfx110X, etc.)
-4. Install PyTorch + torchvision + torchaudio from AMD ROCm nightlies
-5. Install triton, sage-attention, bitsandbytes, flash-attention
-6. Clone ComfyUI Manager and helper nodes
-
-**This takes 15-45 minutes** depending on your internet speed. The ROCm + PyTorch wheels for RDNA1 are ~4-6 GB.
-
-### Download a Model
-
-ComfyUI needs a checkpoint model. For your first test, use **SDXL-turbo** (fast, 4 steps, 8GB VRAM):
-
-```
-# Option 1: Download via script (runs inside CMD)
-scripts\download_sdxl_turbo.bat
-
-# Option 2: Manual download
-# Download from: https://huggingface.co/stabilityai/sdxl-turbo/resolve/main/sd_xl_turbo_1.0_fp16.safetensors
-# Place in: C:\comfyui-rocm\models\checkpoints\
-```
-
-For 8 GB VRAM (RX 5700 XT), also works with **SD 1.5** (~2 GB, very fast):
-
-```
-# SD 1.5:
-# https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors
-# Place in: C:\comfyui-rocm\models\checkpoints\
-```
-
-### Launch
-
-```bat
-cd C:\comfyui-rocm
-comfyui-user.bat
-```
-
-Open your browser to **http://127.0.0.1:8188**
-
-### RX 5700 XT (gfx1010) -- Extra Stability Flags
-
-The RX 5700 XT occasionally hangs on large attention operations. Add these to your `comfyui-user.bat` before the python call:
-
-```bat
-:: IMPORTANT: Do NOT set HSA_OVERRIDE_GFX_VERSION for RDNA1 -- comfyui-rocm auto-detects gfx1010
-:: Setting it (or leaving it as empty string) causes "HSA_OVERRIDE_GFX_VERSION is invalid" and GPU not found
-set "HSA_OVERRIDE_GFX_VERSION="
-set HSA_ENABLE_SDMA=0
-```
-
-> **Critical:** If you ever ran `set HSA_OVERRIDE_GFX_VERSION=10.3.0` in your CMD session by mistake, use `set "HSA_OVERRIDE_GFX_VERSION="` (with quotes) to fully delete it before launching. Without quotes it leaves an empty string that ROCm also rejects.
-
----
-
-## Proof -- Tested on RX 5700 XT
-
-| | |
-|---|---|
-| GPU | AMD Radeon RX 5700 XT (gfx1010 / RDNA1) |
-| VRAM | 8 GB GDDR6 |
-| OS | Windows 11 |
-| Method | comfyui-rocm (Method A) |
-| Model | SD 1.5 (v1-5-pruned-emaonly) |
-| Resolution | 512x512 |
-| Steps | 20 (DPM++ 2M) |
-| Gen time | ~23 sec/image (20 steps, 1.21 it/s) |
-
-<p align="center"><img src="assets/proof_rx5700xt.png" alt="Generated image on RX 5700 XT" width="512"></p>
-
-*Generated on hardware, not simulated. Output folder screenshot available in [assets/](assets/).*
-
----
-
-## Method B: Official AMD Portable (RDNA3/4)
-
-For RX 7000 / RX 9000 / Ryzen AI 300+:
-
-```bat
-:: 1. Download from GitHub releases (look for ComfyUI_windows_portable_amd.7z)
-:: 2. Extract to C:\ComfyUI_amd\
-:: 3. Drop checkpoint in C:\ComfyUI_amd\ComfyUI\models\checkpoints\
-:: 4. Run:
-C:\ComfyUI_amd\run_amd_gpu.bat
-```
-
-PyTorch version bundled: ROCm 7.2 + PyTorch 2.7  
-Supported: RDNA3 (gfx110x), RDNA3.5 (gfx115x), RDNA4 (gfx120x)
-
----
-
-## Method C: DirectML Deep Dive
-
-DirectML works on any AMD GPU that supports DirectX 12 -- RX 400 series and newer. It's slower than ROCm (2-4x) but requires zero driver configuration.
-
-```bat
-git clone https://github.com/comfyanonymous/ComfyUI
-cd ComfyUI
-python -m venv venv
-venv\Scripts\activate
-pip install torch-directml
 pip install -r requirements.txt
-python main.py --directml
+
+python scripts/install.py
+python scripts/launch.py
 ```
 
-### DirectML Performance Tips
+Open your browser to **http://localhost:8188** and start creating.
 
-```bat
-:: Reduce memory usage (helps on 4-8GB VRAM)
-python main.py --directml --lowvram
+## What is ComfyUI?
 
-:: Force fp16 (faster on most AMD cards with DirectML)
-python main.py --directml --force-fp16
+ComfyUI is a node-based interface for Stable Diffusion. Instead of typing prompts in a text box, you build workflows by connecting nodes:
 
-:: If you get NaN/black images:
-python main.py --directml --force-fp32
+- **Model loaders** → generators → **samplers** → output
+- Easily branch pipelines for **inpainting**, **upscaling**, **control networks**
+- **Save workflows as JSON**, run them repeatedly with tweaks
+- Install **custom nodes** to extend functionality
+
+Perfect for creative professionals, researchers, and automation workflows.
+
+## Features
+
+✅ **DirectML Backend** — Full AMD GPU support on Windows  
+✅ **Automatic Installation** — One-command ComfyUI setup  
+✅ **Custom Nodes** — Easy install of popular node packs  
+✅ **Model Management** — Checkpoints, LoRAs, ControlNets in organized folders  
+✅ **Cross-Platform Scripts** — Works on Windows (batch + Python)  
+✅ **AMD Optimized** — `--fp32` flag avoids black image issues  
+✅ **Fallback to CPU** — If GPU detection fails, runs on CPU  
+
+## Usage
+
+### Launch ComfyUI
+
+```bash
+python scripts/launch.py
 ```
 
-### DirectML vs ROCm on Same Hardware (RX 5700 XT)
+Optionally:
+- `--port 8080` — Run on custom port (default: 8188)
+- `--no-fp32` — Use fp16 (faster but may cause issues on some AMD GPUs)
+- `--cpu` — Force CPU mode
 
-| | DirectML | comfyui-rocm |
-|---|---|---|
-| SD 1.5 512x512 @ 20 steps | ~55 sec | ~18 sec |
-| SDXL 1024x1024 @ 20 steps | ~8 min | ~2.5 min |
-| Setup difficulty | Low | Medium |
-| VRAM management | Poor (fills and holds) | Good |
-| Compatibility | Any AMD DX12 GPU | RDNA1+ |
+### Install Custom Nodes
 
----
-
-## Troubleshooting
-
-### `HSA_OVERRIDE_GFX_VERSION is invalid` / `RuntimeError: No CUDA GPUs are available`
-
-This is the most common failure on RDNA1/2 after someone sets the wrong env var:
-
-```bat
-:: Check if the poisoned var is lurking in your session:
-set HSA
-:: If you see HSA_OVERRIDE_GFX_VERSION= (even empty), it will still break ROCm.
-
-:: Properly DELETE it (quotes required -- without quotes leaves empty string, also invalid):
-set "HSA_OVERRIDE_GFX_VERSION="
-
-:: Verify it's gone (should NOT appear in output):
-set HSA
+```bash
+python scripts/install_nodes.py --all
 ```
 
-> comfyui-rocm auto-detects gfx1010/gfx101X and configures the correct ROCm stack via `detect_gpu.py`. You do not need to set `HSA_OVERRIDE_GFX_VERSION` at all for RDNA1.
-
----
-
-### "No AMD GPU detected" / falls back to CPU
-
-```bat
-:: Check your GPU is visible
-wmic path win32_videocontroller get name
-
-:: Verify ROCm sees it (inside comfyui-rocm Python)
-python_env\python.exe -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"
-
-:: If False, check AMD driver version
-:: Minimum: Adrenalin 25.8.1 for ROCm support
+Or install a specific node:
+```bash
+python scripts/install_nodes.py --node ComfyUI-Manager
 ```
 
-### Grey / black images (RDNA1/2)
+### Verify GPU Setup
 
-```bat
-:: Add to comfyui-user.bat:
-python main.py --use-pytorch-cross-attention --disable-xformers
+```bash
+python scripts/verify_gpu.py
 ```
 
-### Out of memory (OOM) on 8 GB VRAM
+This checks DirectML support and diagnoses common issues.
 
-```bat
-:: Add --lowvram or --medvram
-python main.py --lowvram
+### Model Placement
 
-:: For SDXL on 8GB, also try:
-python main.py --medvram --fp8_e4m3fn
+Place models in these folders (created automatically):
+- **Checkpoints**: `ComfyUI/models/checkpoints/`
+- **LoRAs**: `ComfyUI/models/loras/`
+- **ControlNets**: `ComfyUI/models/controlnet/`
+- **VAE**: `ComfyUI/models/vae/`
+- **Inpainting**: `ComfyUI/models/inpaint/`
+
+## Supported Models
+
+- **Stable Diffusion 1.5** — Original base model
+- **Stable Diffusion 2.x** — Higher quality outputs
+- **SDXL** — Latest, highest quality (requires more VRAM)
+- **ControlNet** — Precise image guidance (pose, depth, canny edge)
+- **LoRA** — Lightweight style/concept fine-tuning
+- **Inpainting Models** — Mask-based image editing
+
+## Common Issues
+
+### No GPU Detected
+Run `python scripts/verify_gpu.py` to diagnose:
+- Are AMD drivers installed?
+- Is torch-directml installed?
+- Try `--cpu` mode as fallback.
+
+### Black/Pink Images (AMD fp16 Bug)
+**Solution**: Use `--fp32` flag (enabled by default). If explicitly disabled, add it back:
+```bash
+python scripts/launch.py  # includes --fp32 by default
 ```
 
-### GPU hangs / PC freezes (RX 5700 XT specifically)
+### Out of Memory
+- Start with **Stable Diffusion 1.5** instead of SDXL
+- Reduce resolution: `512x512` instead of `768x768`
+- Use `--fp16` if your GPU has sufficient VRAM and doesn't show artifacts
+- Enable tiling or optimization nodes in ComfyUI UI
 
-```bat
-:: Set before launching:
-set HSA_ENABLE_SDMA=0
-set HSA_ENABLE_MWAITX=0
-python main.py --use-pytorch-cross-attention
-```
+## AMD-Specific Notes
 
-### install.bat fails at ROCm step
+**Why `--fp32`?**  
+Some AMD GPUs have issues with fp16 (half precision), resulting in black/pink outputs. `--fp32` (full precision) is safer.
 
-The nightlies index is sometimes rate-limited. Try again after 10 minutes:
+**Disable xformers:**  
+xformers is NVIDIA-optimized. ComfyUI auto-detects and skips it on DirectML.
 
-```bat
-:: Re-run just the pip install step manually:
-python_env\python.exe -m pip install rocm[devel,libraries] --index-url https://rocm.nightlies.amd.com/v2-staging/gfx101X-dgpu/
-```
+**Driver Compatibility:**  
+- AMD Radeon drivers (20.50+) required
+- Update via AMD Radeon Software or Windows Update
 
-### ComfyUI Manager throws errors on first launch
+## Part of AMD Windows AI Ecosystem
 
-Normal on first start -- it's cloning extensions. Wait 30 seconds and refresh the browser.
+This repo is one of several tools for running modern AI on AMD Windows hardware:
 
----
+- **[amd-windows-toolkit](https://github.com/ChharithOeun/amd-windows-toolkit)** — Central hub for AMD GPU setup, LLM runners, environment validation
+- **comfyui-amd-windows-setup** ← you are here  
+- **Other models & runners coming soon**
 
-## Model Recommendations by VRAM
+Check out the toolkit for unified AMD GPU discovery, PyTorch DirectML validation, and more.
 
-| VRAM | Recommended Models |
-|---|---|
-| 4 GB | SD 1.5 (512x512), SDXL-turbo (lowvram mode) |
-| 6 GB | SD 1.5, SDXL (lowvram), FLUX-schnell GGUF Q2 |
-| 8 GB | SD 1.5, SDXL, SDXL-turbo, FLUX-schnell GGUF Q4 |
-| 12 GB | All of above + FLUX.1-dev GGUF Q4 |
-| 16 GB+ | FLUX.1-dev fp16, SD3.5 Large |
+## Support
 
----
+Found a bug or have a feature request? Open an [Issue](https://github.com/ChharithOeun/comfyui-amd-windows-setup/issues).
 
-## Related Guides in This Ecosystem
-
-- [jax-amd-gpu-setup](https://github.com/ChharithOeun/jax-amd-gpu-setup) -- JAX on AMD GPU (DirectML + ROCm)
-- [torch-amd-setup](https://github.com/ChharithOeun/torch-amd-setup) -- PyTorch detection + benchmarks
-- [rocm-migration-5x-to-6x](https://github.com/ChharithOeun/rocm-migration-5x-to-6x) -- ROCm upgrade guide
-- [directml-benchmark](https://github.com/ChharithOeun/directml-benchmark) -- DirectML speed benchmarks
-- [ollama-amd-windows-setup](https://github.com/ChharithOeun/ollama-amd-windows-setup) -- LLMs on AMD GPU
-
----
-
-## Keywords
-
-ComfyUI AMD GPU Windows, ComfyUI ROCm Windows, ComfyUI RX 5700 XT, ComfyUI RDNA1 setup, ComfyUI RDNA2 Windows, stable diffusion AMD GPU Windows guide, ComfyUI DirectML AMD, PyTorch ROCm Windows gfx1010, AMD GPU image generation Windows, ComfyUI no NVIDIA, ComfyUI RX 6000 Windows, ComfyUI RX 7000 ROCm, comfyui-rocm RDNA1
-
----
-
-## Contributing
-
-Found a GPU/method combo not in the table? Got ComfyUI working on a card not listed?
-
-1. Fork, test, open a PR with your hardware in the title
-2. Include: GPU model, method used, gen time for SD 1.5 @ 20 steps, any extra flags needed
-
----
+Want to contribute? See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-MIT -- see [LICENSE](LICENSE)
+MIT License — see [LICENSE](LICENSE)
 
 ---
 
-## Support This Work
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Support-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/chharith)
 
-If this saved you hours of debugging:
-
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-chharcop-yellow)](https://buymeacoffee.com/chharith)
+If this project saved you hours of setup, consider buying me a coffee!
